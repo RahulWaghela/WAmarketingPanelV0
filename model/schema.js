@@ -86,6 +86,12 @@ const usersSchema = new mongoose.Schema(
     resetToken: String,
     APILink: String,
     BearerToken: String,
+    verified_name:String,
+    code_verification_status:String,
+    display_phone_number:String,
+    quality_rating:String,
+    id:Number,
+    
     tokens: [
       {
         token: {
@@ -102,7 +108,7 @@ const usersSchema = new mongoose.Schema(
     isSuperAdmin: {
       type: Boolean,
       default: false, // Default value is false (not a super admin)
-    }
+    },
   },
   {
     timestamps: {

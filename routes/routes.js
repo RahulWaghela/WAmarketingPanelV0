@@ -499,12 +499,12 @@ router.get("/getLogindata", auth, async (req, res) => {
 // });
 
 router.get("/chating", async (req, res) => {
-  const { gettingResponse } = require("../technovartzin/model/schema");
-  require("../technovartzin/index");
+  // const { gettingResponse } = require("../technovartzin/model/schema");
+  // require("../technovartzin/index");
   try {
-    const findTheMessage = await gettingResponse.find({}, "message");
+    // const findTheMessage = await gettingResponse.find({}, "message");
     const showourMessage = await ChattingMsg.find({}, "gettingMsg");
-    res.render("chating", { showourMessage, findTheMessage });
+    res.render("chating", { showourMessage });
   } catch (error) {
     console.error("Other error:", error);
     res.status(500).send("Internal Server Error");
@@ -644,7 +644,6 @@ router.get("/contacts", auth, async (req, res) => {
     // If there are previous and next pages
     const hasPrevPage = page > 1;
     const hasNextPage = page < totalPages;
-
     res.render("contacts", {
       users: formattedUsers,
       totalContacts: totalUsers,
@@ -692,11 +691,7 @@ router.get("/campaigns", auth, async (req, res) => {
     console.log(error);
   }
 });
-
-
-
-
-
+  
 router.get('/createCampaigns', auth, async (req, res) => {
   try {
     const showInSelectBox = await NumberModel.find({});
@@ -828,7 +823,7 @@ router.post('/SentMessagetothisCampaign', upload.single('extractExcel'),auth, as
             // console.log('Received Excel file:', excelFile.originalname);
             // console.log('Excel File Data:');
             // console.log(jsonData);
-
+                    
             const SaveCampaigncontact = new campaignHistory({
               // _id: new ObjectId(),
               campaignName: campName,
@@ -968,7 +963,9 @@ router.post('/SentMessagetothisCampaign', upload.single('extractExcel'),auth, as
           message: MsgContent,
           phoneNumbers: phoneNumbersInput
         });
-        await SaveCampaigncontact.save();
+       const savedBTemAndCstmVAl = await SaveCampaigncontact.save();
+       console.log(savedBTemAndCstmVAl);
+        
         console.log(`${messageContent} or ${messageType} or ${phoneNumbers}`);
         for (const phoneNumber of phoneNumbers) {
           try {
@@ -1197,13 +1194,41 @@ router.get('/setting',auth,async(req, res) => {
   }
 })
 
-router.post("/saveAPICredentials",auth,async (req, res) => {
+// router.post("/saveAPICredentials",auth,async (req, res) => {
+//   try {
+//     const userEmail = req.body.userEmail; // Assuming userEmail is already available
+//     // Find the existing user document by email
+//     const UserId = req.user;
+//     const user = await alluserOfourPanel.findOne({ _id: UserId._id });
+//     // console.log(user);  
+
+//     const APILink = req.body.API_LINK;
+//     const BearerToken = req.body.BearerToken;
+
+//     if (!user) {
+//       return res.status(404).json({ error: 'User not found' });
+//     }
+
+//     // Update the user document with the API credentials
+//     user.APILink = APILink;
+//     user.BearerToken = BearerToken;
+
+//     // Save the updated user document
+//     await user.save();
+
+//     return res.status(200).json({ message: 'API credentials saved successfully' });
+//   } catch (error) {
+//     console.error('Error saving API credentials:', error);
+//     return res.status(500).json({ error: 'Internal server error' });
+//   }
+// });
+
+// test this
+router.post("/saveAPICredentials", auth, async (req, res) => {
   try {
     const userEmail = req.body.userEmail; // Assuming userEmail is already available
-    // Find the existing user document by email
     const UserId = req.user;
     const user = await alluserOfourPanel.findOne({ _id: UserId._id });
-    // console.log(user);  
 
     const APILink = req.body.API_LINK;
     const BearerToken = req.body.BearerToken;
@@ -1212,20 +1237,47 @@ router.post("/saveAPICredentials",auth,async (req, res) => {
       return res.status(404).json({ error: 'User not found' });
     }
 
-    // Update the user document with the API credentials
+    const regex = /\/(\d{7,})\//;
+    const match = APILink.match(regex);
+    let extractedNumber = null;
+    if (match) {
+      extractedNumber = match[1];
+      console.log('Extracted Number:', extractedNumber); // Log the extracted number
+    }
+
+    // Make request to Facebook Graph API
+    const GRAPH_API_URL = `https://graph.facebook.com/v17.0/${extractedNumber}?fields=verified_name,code_verification_status,display_phone_number,quality_rating,id`;
+    const response = await fetch(GRAPH_API_URL, {
+      headers: {
+        Authorization: `Bearer ${BearerToken}`,
+        "Content-Type": "application/json",
+      }
+    });
+    const data = await response.json();
+
+    console.log('Extracted Data from API:', data); // Log the extracted data from the API
+
+    // Update the user document with the API credentials and extracted data
     user.APILink = APILink;
     user.BearerToken = BearerToken;
+    user.extractedNumber = extractedNumber;
+    user.verified_name = data.verified_name || '';
+    user.code_verification_status = data.code_verification_status || '';
+    user.display_phone_number = data.display_phone_number || '';
+    user.quality_rating = data.quality_rating || '';
+    user.id = data.id || 0;
 
     // Save the updated user document
-    await user.save();
+    const savedDate = await user.save();
+    console.log(savedDate)
 
-    return res.status(200).json({ message: 'API credentials saved successfully' });
+    return res.status(200).json({ message: 'API credentials and extracted data saved successfully', user: user });
   } catch (error) {
     console.error('Error saving API credentials:', error);
     return res.status(500).json({ error: 'Internal server error' });
   }
 });
-
+// test this
 
 router.get('/superAdmin', async(req,res)=>{
    try {
@@ -1238,19 +1290,6 @@ router.get('/superAdmin', async(req,res)=>{
    }
 });
 // check deactivate status 
-// router.post('/deactivateUser', async (req, res) => {
-//   try {
-//       const userId = req.body.userId;
-//       console.log(userId)
-//       // Update user record to mark as deactivated
-//       // For example:
-//       await alluserOfourPanel.findByIdAndUpdate(userId, { isActive: false });
-//       res.status(200).send('User deactivated successfully');
-//   } catch (error) {
-//       console.error('Error deactivating user:', error);
-//       res.status(500).send('An error occurred while deactivating user');
-//   }
-// });
 router.post('/deactivateUser', async (req, res) => {
   try {
     const userId = req.body.userId;
@@ -1321,4 +1360,27 @@ router.post('/toggleUserStatus', async (req, res) => {
     res.status(500).send('An error occurred while toggling user status');
   }
 });
+router.get('/usersDetails/:userId', async (req, res) => {
+  try {
+      // Extract userId from request parameters
+      const userId = req.params.userId;
+
+      // Fetch user details from the database based on userId
+      const userDetails = await alluserOfourPanel.find({ _id: userId }).select('fname lname phoneNum userEmail code_verification_status display_phone_number id quality_rating verified_name');
+
+      // If userDetails is null or undefined, handle the case appropriately
+      if (!userDetails) {
+          // Handle case when userDetails is not found
+          return res.status(404).send("User details not found");
+      }
+
+      // Render the "usersDetails" page with user details
+      res.render('usersDetails', { userDetails: userDetails });
+  } catch (error) {
+      // Handle any errors that occur during fetching user details
+      console.error("Error fetching user details:", error);
+      res.status(500).send("Internal Server Error");
+  }
+});
+
 module.exports = router;

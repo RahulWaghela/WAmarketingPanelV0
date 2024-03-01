@@ -94,7 +94,7 @@
                               <% for (let i=0; i < allusers.length; i++) { %>
                                   <tr>
                                       <td><%= i + 1 %></td>
-                                      <td><%= allusers[i].fname + ' ' + allusers[i].lname %></td>
+                                      <td><a href="/usersDetails/<%= allusers[i]._id %>"><%= allusers[i].fname + ' ' + allusers[i].lname %></a></td>
                                       <td style="width: 92px;">
                                         <% if (allusers[i].isActive) { %>
                                             <a href="#" class="activeStatus" onclick="toggleUserStatus('<%= allusers[i]._id %>')">Active</a>
